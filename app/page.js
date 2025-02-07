@@ -1,85 +1,161 @@
 'use client'
-import { Box, Button, Stack, TextField } from "@mui/material";
-import Image from "next/image";
-import { useState } from "react";
+import { Box, Stack, TextField, Button } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
 
-export default function Home() {
-  const [messages, setMessages] = useState([{
-    role: 'assistant',
-    content: `Hi, I'm the Headstarter Support Agent. how can I assist you today?`
-  }])
+export default function Chat() {
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: "Hi! I'm the Headstarter support assistant. How can I help you today?",
+    },
+  ]);
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [message, setMessage] = useState('')
-
-  const sendMessage = async() => {
-    setMessage('')
+  const sendMessage = async () => {
+    if (!message.trim() || isLoading) return;
+    setIsLoading(true);
+    setMessage('');
     setMessages((messages) => [
       ...messages,
-    {role: "user", content: message},
-    {role:"assistant", content: ''} 
-  ])
-  const response = fetch('api/chat',)
-}
-//  ------------------------------------- ended at 19:32
+      { role: 'user', content: message },
+      { role: 'assistant', content: '' },
+    ]);
 
-  return<Box 
-  width="100vw" 
-  height="100vh"
-  display="flex"
-  flexDirection="column"
-  justifyContent="center"
-  alignItems="center"
-  >
-    <Stack
-    direction="column"
-    width="600px"
-    height="700px"
-    border="1px solid black"
-    p={2}
-    spacing={3}
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([...messages, { role: 'user', content: message }]),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        setMessages((messages) => {
+          let lastMessage = messages[messages.length - 1];
+          let otherMessages = messages.slice(0, messages.length - 1);
+          return [
+            ...otherMessages,
+            { ...lastMessage, content: lastMessage.content + text },
+          ];
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages((messages) => [
+        ...messages,
+        { role: 'assistant', content: "I'm sorry, but I encountered an error. Please try again later." },
+      ]);
+    }
+    setIsLoading(false);
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100); // Short delay ensures smooth scrolling
+  
+    return () => clearTimeout(timeout);
+  }, [messages]);
+  
+  
+  // Function to format the message content
+  const formatContent = (content) => {
+    return content.split('\n').map((line, index) => (
+      <span key={index}>
+        {line}
+        <br />
+      </span>
+    ));
+  };
+
+  return (
+    <Box
+      width="100vw"
+      height="100vh"
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
     >
       <Stack
-      direction="column"
-      spacing={2}
-      flexGrow={1}
-      overflow="auto"
-      maxHeight="100%"
+        direction={'column'}
+        width="500px"
+        height="700px"
+        border="1px solid black"
+        p={2}
+        spacing={3}
       >
-        {
-          messages.map((message, index) => (
+        <Stack
+          direction={'column'}
+          spacing={2}
+          flexGrow={1}
+          overflow="auto"
+          maxHeight="100%"
+        >
+          {messages.map((message, index) => (
             <Box
-            key={index}
-            display="flex"
-            justifyContent={
-              message.role=== 'assistant' ? 'flex-start' : 'flex-end'
-            }
+              key={index}
+              display="flex"
+              justifyContent={
+                message.role === 'assistant' ? 'flex-start' : 'flex-end'
+              }
             >
               <Box
-                bgcolor = {
-                  message.role === 'assistant' 
-                  ? 'primary.main' 
-                  : 'secondary.main'
+                bgcolor={
+                  message.role === 'assistant'
+                    ? 'primary.main'
+                    : 'secondary.main'
                 }
                 color="white"
                 borderRadius={16}
                 p={3}
-                >
-                  {message.content}
+              >
+                {/* Use the formatContent function to render the content */}
+                {formatContent(message.content)}
               </Box>
             </Box>
           ))}
+        </Stack>
+        <div ref={messagesEndRef} />
+        <Stack direction={'row'} spacing={2}>
+          <TextField
+            label="Message"
+            fullWidth
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+          />
+          <Button
+            variant="contained"
+            onClick={sendMessage}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Sending...' : 'Send'}
+          </Button>
+        </Stack>
       </Stack>
-      <Stack direction={"row"} spacing={2}>
-        <TextField
-        label="message"
-        fullWidth
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        />
-        <Button variant="contained">
-          Send
-        </Button>
-      </Stack>
-    </Stack>
-  </Box>
+    </Box>
+  );
 }
