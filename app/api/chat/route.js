@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server' // Import NextResponse from Next.js for
 import OpenAI from 'openai' // Import OpenAI library for interacting with the OpenAI API
 
 // System prompt for the AI, providing guidelines on how to respond to users
-const systemPrompt = `You are a customer support AI
+const systemPrompt = `You are a customer support AI for codream.co
 
 Be concise, friendly, and professional. If you can't resolve an issue, offer to escalate it to a human support agent. Prioritize user privacy and data security in your responses.`
 
