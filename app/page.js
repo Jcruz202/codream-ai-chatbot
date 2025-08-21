@@ -125,7 +125,7 @@ export default function Chat() {
                 bgcolor={
                   message.role === 'assistant'
                     ? 'primary.main'
-                    : 'secondary.main'
+                    : '#94999c'
                 }
                 color="white"
                 borderRadius={16}
