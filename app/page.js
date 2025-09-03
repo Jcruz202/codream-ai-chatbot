@@ -1,8 +1,10 @@
 'use client'
-import { Box, Stack, TextField, Button } from "@mui/material";
+import { Box, Stack, TextField, Button, IconButton } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
+import ChatIcon from '@mui/icons-material/Chat';
+import CloseIcon from '@mui/icons-material/Close';
 
-export default function Chat() {
+export default function ChatWidget() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -11,6 +13,7 @@ export default function Chat() {
   ]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const sendMessage = async () => {
     if (!message.trim() || isLoading) return;
@@ -25,15 +28,11 @@ export default function Chat() {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([...messages, { role: 'user', content: message }]),
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+      if (!response.ok) throw new Error('Network response was not ok');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -55,7 +54,7 @@ export default function Chat() {
       console.error('Error:', error);
       setMessages((messages) => [
         ...messages,
-        { role: 'assistant', content: "I'm sorry, but I encountered an error. Please try again later." },
+        { role: 'assistant', content: "I'm sorry, I encountered an error. Please try again later." },
       ]);
     }
     setIsLoading(false);
@@ -73,89 +72,94 @@ export default function Chat() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100); // Short delay ensures smooth scrolling
-  
+    }, 100);
     return () => clearTimeout(timeout);
   }, [messages]);
-  
-  
-  // Function to format the message content
-  const formatContent = (content) => {
-    return content.split('\n').map((line, index) => (
-      <span key={index}>
-        {line}
-        <br />
-      </span>
-    ));
-  };
+
+  const formatContent = (content) => content.split('\n').map((line, index) => (
+    <span key={index}>{line}<br/></span>
+  ));
 
   return (
     <Box
-      width="100vw"
-      height="100vh"
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
+      sx={{
+        position: 'fixed',
+        bottom: 20,
+        right: 20,
+        width: isOpen ? 350 : 60,
+        height: isOpen ? 500 : 60,
+        borderRadius: 3,
+        boxShadow: 3,
+        bgcolor: 'white',
+        zIndex: 1000,
+        overflow: 'hidden',
+        transition: 'all 0.3s ease-in-out',
+      }}
     >
-      <Stack
-        direction={'column'}
-        width="500px"
-        height="700px"
-        border="1px solid black"
-        p={2}
-        spacing={3}
-      >
-        <Stack
-          direction={'column'}
-          spacing={2}
-          flexGrow={1}
-          overflow="auto"
-          maxHeight="100%"
-        >
-          {messages.map((message, index) => (
-            <Box
-              key={index}
-              display="flex"
-              justifyContent={
-                message.role === 'assistant' ? 'flex-start' : 'flex-end'
-              }
-            >
-              <Box
-                bgcolor={
-                  message.role === 'assistant'
-                    ? 'primary.main'
-                    : '#94999c'
-                }
-                color="white"
-                borderRadius={16}
-                p={3}
-              >
-                {/* Use the formatContent function to render the content */}
-                {formatContent(message.content)}
-              </Box>
-            </Box>
-          ))}
-        </Stack>
-        <div ref={messagesEndRef} />
-        <Stack direction={'row'} spacing={2}>
-          <TextField
-            label="Message"
-            fullWidth
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={isLoading}
-          />
-          <Button
-            variant="contained"
-            onClick={sendMessage}
-            disabled={isLoading}
+      {isOpen ? (
+        <Stack height="100%">
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            p={1}
+            bgcolor="primary.main"
+            color="white"
           >
-            {isLoading ? 'Sending...' : 'Send'}
-          </Button>
+            <Box>CoDream Chat</Box>
+            <IconButton size="small" onClick={() => setIsOpen(false)} sx={{ color: 'white' }}>
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+          <Stack
+            direction="column"
+            spacing={1}
+            flexGrow={1}
+            p={1}
+            overflow="auto"
+          >
+            {messages.map((message, index) => (
+              <Box
+                key={index}
+                display="flex"
+                justifyContent={message.role === 'assistant' ? 'flex-start' : 'flex-end'}
+              >
+                <Box
+                  bgcolor={message.role === 'assistant' ? 'primary.main' : '#94999c'}
+                  color="white"
+                  borderRadius={2}
+                  p={1.5}
+                  maxWidth="80%"
+                >
+                  {formatContent(message.content)}
+                </Box>
+              </Box>
+            ))}
+            <div ref={messagesEndRef} />
+          </Stack>
+          <Stack direction="row" spacing={1} p={1}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Type a message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={isLoading}
+            />
+            <Button variant="contained" size="small" onClick={sendMessage} disabled={isLoading}>
+              {isLoading ? '...' : 'Send'}
+            </Button>
+          </Stack>
         </Stack>
-      </Stack>
+      ) : (
+        <IconButton
+          onClick={() => setIsOpen(true)}
+          sx={{ width: '100%', height: '100%' }}
+        >
+          <ChatIcon color="primary" />
+        </IconButton>
+      )}
     </Box>
   );
 }
