@@ -125,7 +125,7 @@ export default function ChatWidget() {
                 justifyContent={message.role === 'assistant' ? 'flex-start' : 'flex-end'}
               >
                 <Box
-                  bgcolor={message.role === 'assistant' ? 'primary.main' : '#94999c'}
+                  bgcolor={message.role === 'assistant' ? 'primary.main' : '#A020F0'}
                   color="white"
                   borderRadius={2}
                   p={1.5}
